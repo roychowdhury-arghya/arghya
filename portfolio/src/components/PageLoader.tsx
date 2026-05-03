@@ -263,7 +263,7 @@ export default function PageLoader({ children }: { children: React.ReactNode }) 
   return (
     <>
       {/* Global Audio Elements - These stay mounted even after loader finishes */}
-      <audio ref={loaderAudioRef} src="/sounds/page_loader" loop playsInline preload="auto" />
+      <audio ref={loaderAudioRef} src="/sounds/page_loader.mp3" loop playsInline preload="auto" />
       <audio ref={mainAudioRef} src="/sounds/main_page" loop playsInline preload="auto" />
 
       {/* Global Sound Toggle Button */}

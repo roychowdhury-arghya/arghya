@@ -6,27 +6,24 @@ export default function Overlay({ scrollYProgress }: { scrollYProgress?: MotionV
   const { scrollYProgress: globalScroll } = useScroll();
   const progress = scrollYProgress || globalScroll;
 
-  // Section 1: Intro (0% to 20%)
-  const opacity1 = useTransform(progress, [0, 0.1, 0.2], [1, 1, 0]);
-  const y1 = useTransform(progress, [0, 0.2], [0, -100]);
+  // Section 1: Intro (0% to 15%)
+  const opacity1 = useTransform(progress, [0, 0.05, 0.15], [1, 1, 0]);
+  const y1 = useTransform(progress, [0, 0.15], [0, -50]);
+  const visibility1 = useTransform(progress, [0, 0.15, 0.16, 1], ["visible", "visible", "hidden", "hidden"]);
 
-  // Section 2: About (25% to 45%)
-  const opacity2 = useTransform(progress, [0.25, 0.3, 0.4, 0.45], [0, 1, 1, 0]);
-  const y2 = useTransform(progress, [0.25, 0.45], [100, -100]);
+  // Section 2: About (15% to 50%)
+  const opacity2 = useTransform(progress, [0.15, 0.25, 0.45, 0.5], [0, 1, 1, 0]);
+  const y2 = useTransform(progress, [0.15, 0.5], [50, -50]);
 
-  // Section 3: Skills (50% to 70%)
-  const opacity3 = useTransform(progress, [0.5, 0.55, 0.65, 0.7], [0, 1, 1, 0]);
-  const y3 = useTransform(progress, [0.5, 0.7], [100, -100]);
-
-  // Section 4: Hobbies & Goal (75% to 95%)
-  const opacity4 = useTransform(progress, [0.75, 0.8, 0.9, 0.95], [0, 1, 1, 0]);
-  const y4 = useTransform(progress, [0.75, 0.95], [100, -100]);
+  // Section 3: Skills (50% to 90%)
+  const opacity3 = useTransform(progress, [0.5, 0.6, 0.85, 0.9], [0, 1, 1, 0]);
+  const y3 = useTransform(progress, [0.5, 0.9], [50, -50]);
 
   return (
     <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-center">
       
       {/* Section 1: Intro */}
-      <motion.div style={{ opacity: opacity1, y: y1 }} className="absolute inset-0 flex items-center justify-center text-center px-4">
+      <motion.div style={{ opacity: opacity1, y: y1, visibility: visibility1 }} className="absolute inset-0 flex items-center justify-center text-center px-4">
         <div>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]">
             Arghya Roy Chowdhury
@@ -38,7 +35,7 @@ export default function Overlay({ scrollYProgress }: { scrollYProgress?: MotionV
       </motion.div>
 
       {/* Section 2: About */}
-      <motion.div style={{ opacity: opacity2, y: y2 }} className="absolute inset-0 flex items-center justify-start text-left px-6 md:px-[5%] lg:px-[8%]">
+      <motion.div style={{ opacity: opacity2, y: y2 }} className="absolute inset-0 flex items-center justify-start text-left px-8 md:px-[10%] lg:px-[15%]">
         <div className="max-w-xl bg-black/40 p-6 md:p-8 rounded-3xl backdrop-blur-md border border-white/10">
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] mb-4">
             About Me
@@ -51,7 +48,7 @@ export default function Overlay({ scrollYProgress }: { scrollYProgress?: MotionV
       </motion.div>
 
       {/* Section 3: Skills */}
-      <motion.div style={{ opacity: opacity3, y: y3 }} className="absolute inset-0 flex items-center justify-end text-right px-6 md:px-[5%] lg:px-[8%]">
+      <motion.div style={{ opacity: opacity3, y: y3 }} className="absolute inset-0 flex items-center justify-end text-right px-8 md:px-[10%] lg:px-[15%]">
         <div className="max-w-xl bg-black/40 p-6 md:p-8 rounded-3xl backdrop-blur-md border border-white/10 ml-auto">
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] mb-6">
             Technical Arsenal
@@ -61,23 +58,6 @@ export default function Overlay({ scrollYProgress }: { scrollYProgress?: MotionV
             <p><strong className="font-semibold text-emerald-300">Web Dev:</strong> HTML5, CSS3, React, Vite</p>
             <p><strong className="font-semibold text-purple-300">Backend:</strong> Node.js, Express, FastAPI</p>
             <p><strong className="font-semibold text-pink-300">Tools:</strong> SQLite, Linux, Git, Netlify</p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Section 4: Goal & Hobbies */}
-      <motion.div style={{ opacity: opacity4, y: y4 }} className="absolute inset-0 flex items-center justify-center text-center px-[10%]">
-        <div className="max-w-3xl bg-black/40 p-6 md:p-10 rounded-3xl backdrop-blur-md border border-white/10">
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] mb-4">
-            Beyond Code
-          </h2>
-          <p className="text-lg md:text-xl text-white font-light drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] leading-relaxed mb-6">
-            I love photography (especially macro & creative shots), writing poems and short stories, and playing the Tabla.
-          </p>
-          <div className="inline-block px-6 py-4 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md">
-            <p className="text-base md:text-lg font-medium text-pink-200 drop-shadow-md">
-              "I don’t just want to write code — I want to create something meaningful that reflects both logic and emotion."
-            </p>
           </div>
         </div>
       </motion.div>
