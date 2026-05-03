@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useScroll, useMotionValueEvent } from "framer-motion";
 
 const frameCount = 120;
@@ -9,7 +9,9 @@ function getCurrentFrame(index: number) {
   return `/sequence/frame_${index.toString().padStart(3, "0")}_delay-0.066s.webp`;
 }
 
-export default function ScrollyCanvas({ children }: { children: React.ReactNode }) {
+import Overlay from "./Overlay";
+
+export default function ScrollyCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -45,17 +47,7 @@ export default function ScrollyCanvas({ children }: { children: React.ReactNode 
     if (!ctx) return;
 
     const img = imgs[index];
-    
-    // Ensure we account for device pixel ratio for sharp rendering
-    const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    
-    // Set actual size in memory (scaled for retina displays)
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    
-    // Normalize coordinate system to use css pixels
-    ctx.scale(dpr, dpr);
 
     // object-fit: cover logic
     const imgRatio = img.width / img.height;
@@ -93,7 +85,31 @@ export default function ScrollyCanvas({ children }: { children: React.ReactNode 
   });
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const setCanvasSize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.scale(dpr, dpr);
+    };
+
+    setCanvasSize();
+
+    // Force an initial render as soon as images are loaded
+    if (images.length === frameCount) {
+      const frameIndex = Math.min(
+        frameCount - 1,
+        Math.floor(scrollYProgress.get() * frameCount)
+      );
+      renderFrame(frameIndex, images);
+    }
+
     const handleResize = () => {
+      setCanvasSize();
       if (images.length === frameCount) {
         const frameIndex = Math.min(
           frameCount - 1,
@@ -102,6 +118,7 @@ export default function ScrollyCanvas({ children }: { children: React.ReactNode 
         renderFrame(frameIndex, images);
       }
     };
+    
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [images, scrollYProgress]);
@@ -114,7 +131,7 @@ export default function ScrollyCanvas({ children }: { children: React.ReactNode 
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 z-10">
-          {children}
+          <Overlay scrollYProgress={scrollYProgress} />
         </div>
       </div>
     </div>

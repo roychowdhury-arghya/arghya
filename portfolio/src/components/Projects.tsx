@@ -83,6 +83,7 @@ export default function Projects() {
       tags: ["React", "Weather API", "Netlify"],
       borderGradient: "from-blue-500 to-cyan-400",
       glowGradient: "from-blue-600 to-cyan-500",
+      liveUrl: "https://calmcast-arghya.netlify.app/",
     },
     {
       title: "SwachTrack",
@@ -110,38 +111,64 @@ export default function Projects() {
   return (
     <section id="projects" className="relative z-20 bg-[#0a0a0a] text-white pt-24 pb-32 px-6 md:px-20 border-t border-white/10 overflow-hidden">
       
-      {/* Animated Colorful Background */}
-      <div className="absolute inset-0 pointer-events-none z-0 opacity-50">
+      {/* Animated Colorful Grid Background */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        
+        {/* Moving Grid Overlay */}
+        <motion.div 
+          className="absolute w-[200%] h-[200%] -top-[50%] -left-[50%] opacity-40"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgba(255,255,255,0.2) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(255,255,255,0.2) 1px, transparent 1px)
+            `,
+            backgroundSize: '60px 60px'
+          }}
+          animate={{
+            y: [0, 60],
+            x: [0, 60]
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+        />
+
+        {/* Animated Color Orbs Behind/Through Grid */}
         <motion.div 
           animate={{ 
             scale: [1, 1.2, 1],
-            opacity: [0.3, 0.6, 0.3],
+            opacity: [0.6, 0.9, 0.6],
             x: [0, 100, 0],
             y: [0, -50, 0]
           }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-[20%] -right-[10%] w-[50vw] h-[50vw] rounded-full bg-purple-600/40 blur-[120px]"
+          className="absolute -top-[20%] -right-[10%] w-[50vw] h-[50vw] rounded-full bg-purple-500/60 blur-[100px] mix-blend-screen"
         />
         <motion.div 
           animate={{ 
             scale: [1, 1.3, 1],
-            opacity: [0.2, 0.5, 0.2],
+            opacity: [0.5, 0.8, 0.5],
             x: [0, -100, 0],
             y: [0, 50, 0]
           }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[20%] -left-[10%] w-[60vw] h-[60vw] rounded-full bg-blue-600/30 blur-[120px]"
+          className="absolute top-[20%] -left-[10%] w-[60vw] h-[60vw] rounded-full bg-cyan-500/50 blur-[100px] mix-blend-screen"
         />
         <motion.div 
           animate={{ 
             scale: [1, 1.1, 1],
-            opacity: [0.2, 0.5, 0.2],
+            opacity: [0.5, 0.8, 0.5],
             x: [0, 50, 0],
             y: [0, 100, 0]
           }}
           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -bottom-[20%] right-[20%] w-[40vw] h-[40vw] rounded-full bg-orange-600/30 blur-[120px]"
+          className="absolute -bottom-[20%] right-[20%] w-[40vw] h-[40vw] rounded-full bg-emerald-500/50 blur-[100px] mix-blend-screen"
         />
+
+        {/* Top & Bottom Vignette Fades to blend into adjacent sections safely */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-transparent to-[#0a0a0a]" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
@@ -159,9 +186,15 @@ export default function Projects() {
                 ))}
               </div>
               <div className="flex gap-6 mt-auto">
-                <button className="flex items-center gap-2 text-sm font-bold text-white hover:opacity-80 transition-opacity">
-                  <ExternalLink size={18} /> Live Demo
-                </button>
+                {project.liveUrl ? (
+                  <a href={project.liveUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-bold text-white hover:opacity-80 transition-opacity">
+                    <ExternalLink size={18} /> Live Demo
+                  </a>
+                ) : (
+                  <button className="flex items-center gap-2 text-sm font-bold text-white hover:opacity-80 transition-opacity cursor-not-allowed">
+                    <ExternalLink size={18} /> Live Demo
+                  </button>
+                )}
                 <button className="flex items-center gap-2 text-sm font-bold text-white/70 hover:text-white transition-opacity">
                   <Code size={18} /> Source
                 </button>

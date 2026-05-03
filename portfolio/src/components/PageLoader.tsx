@@ -1,55 +1,173 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Volume2, VolumeX } from "lucide-react";
 
-const cyberQuotes = [
+const hackerQuotes = [
   "Convincing pixels to behave...",
-  "Decrypting creativity...",
-  "Summoning the 3D magic...",
   "Compiling dreams and caffeine...",
-  "Almost there, don't blink...",
-  "Loading vibes securely..."
+  "Decrypting creativity...",
+  "Almost there...",
+  "Loading brilliance..."
 ];
 
-const terminalLogsSource = [
-  "Initializing portfolio system...",
+const terminalLines = [
+  "Initializing system...",
+  "Loading assets...",
   "Loading WebP frames...",
   "Injecting creativity...",
   "Compiling projects...",
-  "Syncing dreams with code...",
-  "Access granted."
+  "Syncing data..."
 ];
+
+// Helper to smooth fade HTML audio volume
+const fadeAudio = (audio: HTMLAudioElement, targetVolume: number, duration: number) => {
+  // Clear any existing fade interval on this audio object to prevent overlapping commands
+  if ((audio as any)._fadeInterval) {
+    clearInterval((audio as any)._fadeInterval);
+  }
+
+  const steps = 20;
+  const stepTime = duration / steps;
+  const startVolume = audio.volume;
+  const volumeStep = (targetVolume - startVolume) / steps;
+  
+  let currentStep = 0;
+  const interval = setInterval(() => {
+    currentStep++;
+    let newVolume = startVolume + (volumeStep * currentStep);
+    // Clamp to valid range [0, 1]
+    newVolume = Math.max(0, Math.min(1, newVolume));
+    audio.volume = newVolume;
+    
+    if (currentStep >= steps || Math.abs(newVolume - targetVolume) < 0.01) {
+      clearInterval(interval);
+      audio.volume = targetVolume;
+      if (targetVolume === 0) {
+        audio.pause();
+      }
+    }
+  }, stepTime);
+
+  (audio as any)._fadeInterval = interval;
+};
 
 export default function PageLoader({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const [visibleLogs, setVisibleLogs] = useState<string[]>([terminalLogsSource[0]]);
-  const [accessGranted, setAccessGranted] = useState(false);
+  const [timePassed, setTimePassed] = useState(false);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const [accessGrantedSequence, setAccessGrantedSequence] = useState(false);
 
-  // Quote rotation
-  useEffect(() => {
-    if (!isLoading) return;
-    const quoteInterval = setInterval(() => {
-      setQuoteIndex((prev) => (prev + 1) % cyberQuotes.length);
-    }, 2000);
-    return () => clearInterval(quoteInterval);
-  }, [isLoading]);
+  // Global Audio State
+  const [isSoundOn, setIsSoundOn] = useState(false);
+  const [isAudioAllowed, setIsAudioAllowed] = useState(false);
 
-  // Terminal logs logic tied to progress
+  const loaderAudioRef = useRef<HTMLAudioElement>(null);
+  const mainAudioRef = useRef<HTMLAudioElement>(null);
+
+
+
+  // 1. Handle Global Interaction for Browser Autoplay Policies
   useEffect(() => {
-    const logsCount = terminalLogsSource.length;
-    if (progress === 100) {
-      setVisibleLogs(terminalLogsSource);
-      setAccessGranted(true);
-    } else {
-      const index = Math.floor((progress / 100) * (logsCount - 1));
-      setVisibleLogs(terminalLogsSource.slice(0, index + 1));
+    const handleFirstInteraction = () => {
+      // Synchronously unlock audio within the user interaction event
+      if (isSoundOn && !isAudioAllowed) {
+        if (loaderAudioRef.current && isLoading) {
+          loaderAudioRef.current.volume = 0;
+          loaderAudioRef.current.play().catch(() => {});
+        }
+        if (mainAudioRef.current) {
+          // Play and immediately pause to unlock the element for future use
+          mainAudioRef.current.volume = 0;
+          mainAudioRef.current.play().then(() => {
+            if (isLoading && mainAudioRef.current) {
+              mainAudioRef.current.pause();
+            }
+          }).catch(() => {});
+        }
+      }
+
+      setIsAudioAllowed(true);
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+    };
+
+    window.addEventListener('click', handleFirstInteraction);
+    window.addEventListener('keydown', handleFirstInteraction);
+    window.addEventListener('touchstart', handleFirstInteraction);
+
+    return () => {
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+    };
+  }, [isSoundOn, isLoading, isAudioAllowed]);
+
+  // 2. Global Audio Controller
+  useEffect(() => {
+    const loaderAudio = loaderAudioRef.current;
+    const mainAudio = mainAudioRef.current;
+
+    if (!loaderAudio || !mainAudio) return;
+
+    if (!isSoundOn || !isAudioAllowed) {
+      // Fade out both if sound turned off or not allowed yet
+      fadeAudio(loaderAudio, 0, 500);
+      fadeAudio(mainAudio, 0, 500);
+      return;
     }
-  }, [progress]);
 
-  // Preload assets
+    // Sound is ON and user has interacted
+    if (isLoading && !isTransitioning) {
+      // Loader Phase: play loader audio at medium volume
+      if (loaderAudio.paused) {
+        loaderAudio.volume = 0; 
+        loaderAudio.play().catch(() => {});
+      }
+      fadeAudio(loaderAudio, 0.5, 800); // target 0.5
+      fadeAudio(mainAudio, 0, 500);
+    } else {
+      // Transition / Main Phase: fade out loader, play main audio low
+      fadeAudio(loaderAudio, 0, 1000);
+      if (mainAudio.paused) {
+        mainAudio.volume = 0;
+        mainAudio.play().catch(() => {});
+      }
+      fadeAudio(mainAudio, 0.15, 2000); // Smooth fade in to 0.15 over 2 seconds
+    }
+  }, [isSoundOn, isAudioAllowed, isLoading, isTransitioning]);
+
+  const toggleMute = () => {
+    setIsSoundOn((prev) => !prev);
+    // If turning sound ON directly through the button, also consider it an interaction
+    if (!isAudioAllowed) {
+      setIsAudioAllowed(true);
+    }
+  };
+
+  // Rotating Quotes
+  useEffect(() => {
+    if (!isLoading || isTransitioning) return;
+    const interval = setInterval(() => {
+      setQuoteIndex((prev) => (prev + 1) % hackerQuotes.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isLoading, isTransitioning]);
+
+  // Minimum 4s Timer
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimePassed(true);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Preload Logic
   useEffect(() => {
     if (!isLoading) return;
 
@@ -65,7 +183,7 @@ export default function PageLoader({ children }: { children: React.ReactNode }) 
 
     if (totalAssets === 0) {
       setTimeout(() => setProgress(100), 0);
-      setTimeout(() => setIsLoading(false), 1500); 
+      setTimeout(() => setAssetsLoaded(true), 0);
       return;
     }
 
@@ -75,9 +193,7 @@ export default function PageLoader({ children }: { children: React.ReactNode }) 
       setProgress(currentProgress);
 
       if (loadedAssets === totalAssets) {
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 1500); 
+        setAssetsLoaded(true);
       }
     };
 
@@ -94,212 +210,194 @@ export default function PageLoader({ children }: { children: React.ReactNode }) 
     };
   }, [isLoading]);
 
-  // Generate particles only on client to avoid hydration mismatch
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number; delay: number; duration: number; opacity: number }[]>([]);
+  // Transition & End Sequence Trigger
   useEffect(() => {
-    if (!isLoading) return;
-    const newParticles = Array.from({ length: 20 }).map((_, i) => ({
-      id: i,
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      delay: Math.random() * 2,
-      duration: Math.random() * 5 + 5,
-      opacity: Math.random() * 0.5 + 0.2
-    }));
-    setTimeout(() => setParticles(newParticles), 0);
-  }, [isLoading]);
+    if (timePassed && assetsLoaded && !isTransitioning) {
+      setAccessGrantedSequence(true);
+      // Brief pause for the access granted glitch effect, then fade out
+      setTimeout(() => {
+        setIsTransitioning(true);
+        setTimeout(() => setIsLoading(false), 800);
+      }, 1000);
+    }
+  }, [timePassed, assetsLoaded, isTransitioning]);
+
+  // Typing Effect Logic
+  const [typedLines, setTypedLines] = useState<string[]>([]);
+  const [currentLineIndex, setCurrentLineIndex] = useState(0);
+  const [currentCharIndex, setCurrentCharIndex] = useState(0);
+
+  useEffect(() => {
+    if (accessGrantedSequence) {
+      // Auto-fill lines if access granted happens before typing finishes
+      setTypedLines(terminalLines);
+      return;
+    }
+
+    if (currentLineIndex < terminalLines.length) {
+      const currentFullText = terminalLines[currentLineIndex];
+      if (currentCharIndex < currentFullText.length) {
+        const timeout = setTimeout(() => {
+          setTypedLines((prev) => {
+            const newLines = [...prev];
+            if (newLines[currentLineIndex] === undefined) {
+              newLines[currentLineIndex] = currentFullText[currentCharIndex];
+            } else {
+              newLines[currentLineIndex] += currentFullText[currentCharIndex];
+            }
+            return newLines;
+          });
+          setCurrentCharIndex((prev) => prev + 1);
+        }, Math.random() * 30 + 15); // Fast realistic typing speed
+        return () => clearTimeout(timeout);
+      } else {
+        const timeout = setTimeout(() => {
+          setCurrentLineIndex((prev) => prev + 1);
+          setCurrentCharIndex(0);
+        }, 300); // pause between lines
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [currentCharIndex, currentLineIndex, accessGrantedSequence]);
 
   return (
     <>
+      {/* Global Audio Elements - These stay mounted even after loader finishes */}
+      <audio ref={loaderAudioRef} src="/sounds/page_loader" loop playsInline preload="auto" />
+      <audio ref={mainAudioRef} src="/sounds/main_page" loop playsInline preload="auto" />
+
+      {/* Global Sound Toggle Button */}
+      <button 
+        onClick={toggleMute}
+        className="fixed bottom-8 right-8 z-[10000] p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors text-white/50 hover:text-white group shadow-lg"
+        aria-label="Toggle global sound"
+      >
+        {!isSoundOn ? <VolumeX size={20} /> : <Volume2 size={20} />}
+      </button>
+
       <AnimatePresence>
         {isLoading && (
           <motion.div
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8, ease: "easeInOut" }}
-            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050505] text-[#0f0] overflow-hidden font-mono"
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#030705] font-mono text-[#00ffa3] overflow-hidden"
           >
-            {/* Cyberpunk Grid Background */}
+            {/* Subtle Gradient & Grid Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#020403] to-[#07130e] pointer-events-none z-0" />
             <div 
-              className="absolute inset-0 opacity-20 pointer-events-none"
+              className="absolute inset-0 opacity-[0.02] pointer-events-none z-0"
               style={{
-                backgroundImage: `
-                  linear-gradient(to right, rgba(0, 255, 255, 0.15) 1px, transparent 1px),
-                  linear-gradient(to bottom, rgba(0, 255, 255, 0.15) 1px, transparent 1px)
-                `,
-                backgroundSize: '40px 40px',
-                transform: 'perspective(500px) rotateX(60deg) scale(2.5) translateY(-10%)',
-                transformOrigin: 'center top'
+                backgroundImage: 'linear-gradient(#00ffa3 1px, transparent 1px), linear-gradient(90deg, #00ffa3 1px, transparent 1px)',
+                backgroundSize: '40px 40px'
               }}
             />
 
-            {/* Scanlines Overlay */}
-            <div 
-              className="absolute inset-0 opacity-20 pointer-events-none z-50"
-              style={{
-                background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))',
-                backgroundSize: '100% 4px, 3px 100%'
-              }}
-            />
-
-            {/* Glowing Orbs */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none mix-blend-screen">
-              <motion.div 
-                animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-1/4 left-1/4 w-[30vw] h-[30vw] rounded-full bg-cyan-500/30 blur-[120px]"
-              />
-              <motion.div 
-                animate={{ scale: [1, 1.5, 1], opacity: [0.1, 0.3, 0.1] }}
-                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute bottom-1/4 right-1/4 w-[40vw] h-[40vw] rounded-full bg-purple-600/30 blur-[150px]"
-              />
-            </div>
-
-            {/* Floating Particles */}
-            {particles.map((p) => (
-              <motion.div
-                key={p.id}
-                className="absolute w-1 h-1 bg-cyan-400 rounded-full blur-[1px]"
-                initial={{
-                  x: p.x,
-                  y: p.y,
-                  opacity: p.opacity
-                }}
-                animate={{
-                  y: [null, p.y - 200],
-                  opacity: [null, 0]
-                }}
-                transition={{
-                  duration: p.duration,
-                  delay: p.delay,
-                  repeat: Infinity,
-                  ease: "linear"
-                }}
-              />
-            ))}
-
-            {/* Terminal Card */}
-            <div className="relative z-10 w-full max-w-2xl px-6">
-              <div className="backdrop-blur-xl bg-black/60 border border-cyan-500/30 rounded-lg shadow-[0_0_40px_rgba(0,255,255,0.15)] overflow-hidden">
+            {/* Terminal Container */}
+            <motion.div 
+              className="relative z-10 w-full max-w-2xl px-6"
+              animate={isTransitioning ? { opacity: 0, scale: 0.98, y: -10 } : { opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: "easeInOut" }}
+            >
+              <div className="backdrop-blur-sm bg-black/60 border border-[#00ffa3]/20 rounded-md shadow-[0_0_40px_rgba(0,255,163,0.03)] overflow-hidden">
                 {/* Terminal Header */}
-                <div className="flex items-center px-4 py-3 border-b border-cyan-500/30 bg-cyan-950/30">
-                  <div className="flex gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/80 shadow-[0_0_8px_rgba(234,179,8,0.8)]" />
-                    <div className="w-3 h-3 rounded-full bg-green-500/80 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+                <div className="flex items-center px-4 py-3 border-b border-[#00ffa3]/20 bg-[#00ffa3]/5">
+                  <div className="flex gap-2.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
                   </div>
-                  <div className="flex-1 text-center text-xs text-cyan-400/80 font-bold tracking-widest uppercase">
-                    SYS.TERMINAL // SECURE_BOOT
+                  <div className="flex-1 text-center text-[11px] text-[#00ffa3]/40 uppercase tracking-widest font-semibold">
+                    init_sequence.sh
                   </div>
                 </div>
 
                 {/* Terminal Body */}
-                <div className="p-6 sm:p-10 flex flex-col min-h-[380px] relative">
-                  {/* Glitch Name */}
-                  <div className="relative text-center mb-10">
-                    <motion.h1 
-                      className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-purple-500 uppercase tracking-widest drop-shadow-[0_0_15px_rgba(0,255,255,0.6)]"
-                      animate={{
-                        opacity: [1, 0.8, 1, 1, 0.9, 1, 0, 1],
-                        x: [0, -2, 2, -1, 1, 0, 0, 0]
-                      }}
-                      transition={{
-                        duration: 3,
-                        repeat: Infinity,
-                        repeatDelay: 2
-                      }}
-                    >
-                      ARGHYA ROY CHOWDHURY
-                    </motion.h1>
-                    {/* Glitch overlays */}
-                    <span className="absolute inset-0 flex justify-center items-center text-2xl sm:text-4xl font-black text-cyan-400 mix-blend-screen opacity-50 translate-x-[3px] animate-pulse pointer-events-none uppercase tracking-widest">ARGHYA ROY CHOWDHURY</span>
-                    <span className="absolute inset-0 flex justify-center items-center text-2xl sm:text-4xl font-black text-purple-500 mix-blend-screen opacity-50 -translate-x-[3px] animate-pulse pointer-events-none uppercase tracking-widest" style={{ animationDelay: '0.1s' }}>ARGHYA ROY CHOWDHURY</span>
-                  </div>
-
+                <div className="p-6 sm:p-10 flex flex-col min-h-[360px]">
                   {/* Typing Logs */}
-                  <div className="flex-1 space-y-3 text-sm sm:text-base text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] font-semibold">
-                    {visibleLogs.map((log, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className={i === terminalLogsSource.length - 1 ? "text-green-400 font-bold mt-6 shadow-[0_0_10px_rgba(34,197,94,0.5)]" : ""}
-                      >
-                        <span className="mr-3 text-cyan-300 opacity-70">&gt;</span>
-                        {log}
-                      </motion.div>
+                  <div className="flex-1 space-y-3 text-xs sm:text-sm text-[#00ffa3]/80 tracking-wide">
+                    {typedLines.map((line, i) => (
+                      <div key={i}>
+                        <span className="opacity-40 mr-3">&gt;</span>
+                        {line}
+                      </div>
                     ))}
-                    {!accessGranted && (
+                    
+                    {/* Blinking Cursor while typing */}
+                    {(!accessGrantedSequence) && (
                       <motion.div
                         animate={{ opacity: [1, 0] }}
-                        transition={{ duration: 0.8, repeat: Infinity }}
-                        className="inline-block w-2.5 h-5 bg-cyan-400 ml-2 translate-y-1 shadow-[0_0_10px_rgba(34,211,238,0.9)]"
+                        transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                        className="inline-block w-2 h-3.5 bg-[#00ffa3]/80 ml-1 translate-y-0.5"
                       />
                     )}
                   </div>
 
-                  {/* Progress Section */}
-                  <div className="mt-10">
-                    <div className="flex justify-between items-end mb-3 text-xs sm:text-sm text-cyan-300">
-                      <AnimatePresence mode="wait">
-                        <motion.span
-                          key={quoteIndex}
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -5 }}
-                          className="italic opacity-80 font-light"
-                        >
-                          {cyberQuotes[quoteIndex]}
-                        </motion.span>
-                      </AnimatePresence>
-                      <span className="font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.9)] text-lg">
+                  {/* End Sequence Access Granted */}
+                  <AnimatePresence>
+                    {accessGrantedSequence && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -5 }}
+                        animate={{ opacity: [0, 1, 0.3, 1, 0.8, 1], x: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="mt-6 font-bold text-[#00ffa3] text-lg sm:text-xl tracking-widest drop-shadow-[0_0_8px_rgba(0,255,163,0.4)]"
+                      >
+                        <span className="opacity-40 mr-3 text-sm">&gt;</span>
+                        ACCESS GRANTED ✔
+                        <motion.div
+                          animate={{ opacity: [1, 0] }}
+                          transition={{ duration: 0.4, repeat: Infinity, ease: "linear" }}
+                          className="inline-block w-2.5 h-5 bg-[#00ffa3] ml-2 translate-y-1 shadow-[0_0_8px_rgba(0,255,163,0.6)]"
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Bottom Section */}
+                  <div className="mt-12 pt-6 border-t border-[#00ffa3]/10">
+                    <div className="flex justify-between items-end mb-4">
+                      {/* Rotating Quotes */}
+                      <div className="h-4">
+                        <AnimatePresence mode="wait">
+                          <motion.p
+                            key={quoteIndex}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="text-[11px] sm:text-xs text-[#00ffa3]/40 font-light"
+                          >
+                            // {hackerQuotes[quoteIndex]}
+                          </motion.p>
+                        </AnimatePresence>
+                      </div>
+                      
+                      {/* Percentage */}
+                      <span className="text-xs text-[#00ffa3]/60 font-mono tracking-widest">
                         {progress}%
                       </span>
                     </div>
                     
-                    {/* Neon Progress Bar */}
-                    <div className="h-2 w-full bg-cyan-950/60 rounded-full overflow-hidden border border-cyan-800/40 relative">
+                    {/* Thin Linear Progress Bar */}
+                    <div className="w-full h-[2px] bg-[#00ffa3]/10 rounded-full overflow-hidden">
                       <motion.div 
-                        className="absolute top-0 left-0 h-full rounded-full bg-cyan-400 shadow-[0_0_20px_rgba(34,211,238,1),0_0_10px_rgba(34,211,238,0.8)_inset]"
-                        initial={{ width: 0 }}
+                        className="h-full bg-[#00ffa3]/80 shadow-[0_0_8px_rgba(0,255,163,0.5)] rounded-full"
+                        initial={{ width: "0%" }}
                         animate={{ width: `${progress}%` }}
-                        transition={{ ease: "easeOut", duration: 0.2 }}
+                        transition={{ ease: "linear", duration: 0.2 }}
                       />
                     </div>
                   </div>
-
-                  {/* Access Granted Overlay Effect */}
-                  <AnimatePresence>
-                    {accessGranted && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-20 flex items-center justify-center bg-black/85 backdrop-blur-md rounded-b-lg"
-                      >
-                        <motion.div 
-                          className="text-3xl sm:text-5xl font-black text-green-500 tracking-[0.2em] border-4 border-green-500 p-6 sm:p-8 rounded shadow-[0_0_60px_rgba(34,197,94,0.5)] drop-shadow-[0_0_15px_rgba(34,197,94,0.9)] text-center"
-                          animate={{ scale: [1, 1.02, 1] }}
-                          transition={{ duration: 0.2, repeat: Infinity }}
-                        >
-                          ACCESS GRANTED
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
       <motion.div
         initial={false}
-        animate={{
-          opacity: isLoading ? 0 : 1,
-        }}
+        animate={{ opacity: isLoading ? 0 : 1 }}
         transition={{ duration: 0.8, ease: "easeInOut", delay: 0.2 }}
         style={{ pointerEvents: isLoading ? "none" : "auto" }}
       >

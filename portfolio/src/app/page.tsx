@@ -12,9 +12,7 @@ export default function Home() {
       <main className="bg-background min-h-screen relative">
         <Navbar />
         
-        <ScrollyCanvas>
-          <Overlay />
-        </ScrollyCanvas>
+        <ScrollyCanvas />
         
         <Projects />
         <SocialMarquee />
