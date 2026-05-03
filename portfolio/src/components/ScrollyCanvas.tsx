@@ -6,7 +6,7 @@ import { useScroll, useMotionValueEvent } from "framer-motion";
 const frameCount = 120;
 
 function getCurrentFrame(index: number) {
-  return `/sequence/frame_${index.toString().padStart(3, "0")}_delay-0.066s.png`;
+  return `/sequence/frame_${index.toString().padStart(3, "0")}_delay-0.066s.webp`;
 }
 
 export default function ScrollyCanvas({ children }: { children: React.ReactNode }) {
